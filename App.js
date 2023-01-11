@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button } from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import {Client} from 'paho-mqtt';
 
@@ -31,24 +31,39 @@ function onConnect()
 
 function displayMessage(msg)
 {
+  console.log(msg.topic)
   console.log(msg.payloadString);
   setMessageList(messageList + "\n" + msg.payloadString);
+  //case by case topic sorted assignment
+  //if topic => do this
 }
 
+
+function toast()
+{
+  ToastAndroid.show("testing", ToastAndroid.SHORT);
+}
+
+//row status viewer layout
 const Row = ({color1, color2}) => {
   return (
-    <View style={{flex:0.15, flexDirection:"row"}}>
-      <View style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor}}>
-        <Text>
-          sdf
+    <View style={{flex:0.14, flexDirection:"row"}}>
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}}>
+        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center"}}> 
+          〄
         </Text>
-      </View>
-      <View style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor}}>
-        <Text>
-          sss
-          {color2}
+        <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}} > 
+          $$val$$
         </Text>
-      </View>
+      </TouchableOpacity>
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => toast()}>
+        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
+          💡
+        </Text>
+        <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}}> 
+          status
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -58,7 +73,7 @@ const Row = ({color1, color2}) => {
 
   return (
     <View style={styles.container}>
-      <View style={{flex:0.3, alignItems:"center", justifyContent:"center"}}>
+      <View style={{flex:0.4, alignItems:"center", justifyContent:"center"}}>
         <Button title='Clear' onPress={() => setMessageList("--")}/>
         <Text>{messageList}</Text>
         <StatusBar style="auto" />
@@ -68,6 +83,8 @@ const Row = ({color1, color2}) => {
       <Row color1="blue" color2="pink"/>
       <Row color1="blue" color2="pink"/>
       <Row color1="blue" color2="pink"/>
+
+      <Text color="green"> status : connected/disconnected</Text>
 
     </View>
 
