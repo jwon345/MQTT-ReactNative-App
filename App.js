@@ -9,8 +9,9 @@ export default function App() {
 
 const settings =
 {
-  leftColor: "lightblue",
-  rightColor: "blue"
+  leftColor: '#239F',
+  rightColor: '#239F',
+  borderWidth:1, 
 }
 
 const client = new Client("52.63.111.219",9001,'/mqtt','native');
@@ -36,13 +37,13 @@ function displayMessage(msg)
 
 const Row = ({color1, color2}) => {
   return (
-    <View style={{flex:0.1, flexDirection:"row", margin:1 }}>
-      <View style={{flex:0.5, backgroundColor:settings.leftColor}}>
+    <View style={{flex:0.15, flexDirection:"row"}}>
+      <View style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor}}>
         <Text>
           sdf
         </Text>
       </View>
-      <View style={{flex:0.5, backgroundColor:settings.rightColor}}>
+      <View style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor}}>
         <Text>
           sss
           {color2}
@@ -57,14 +58,12 @@ const Row = ({color1, color2}) => {
 
   return (
     <View style={styles.container}>
-      <View style={{flex:0.3}}>
+      <View style={{flex:0.3, alignItems:"center", justifyContent:"center"}}>
         <Button title='Clear' onPress={() => setMessageList("--")}/>
         <Text>{messageList}</Text>
         <StatusBar style="auto" />
       </View>
 
-      <Row color1="blue" color2="pink"/>
-      <Row color1="blue" color2="pink"/>
       <Row color1="blue" color2="pink"/>
       <Row color1="blue" color2="pink"/>
       <Row color1="blue" color2="pink"/>
@@ -79,7 +78,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'baseline',
-    justifyContent: 'center',
   },
 });
