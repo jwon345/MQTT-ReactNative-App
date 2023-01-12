@@ -1,11 +1,45 @@
 //James Wong 2023
 
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions } from 'react-native';
 import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import PureChart from 'react-native-pure-chart-bar-kit';
+
+import React from 'react';
+import { AreaChart, LineChart, Grid} from 'react-native-svg-charts';
+
+import LineChartExample from './components/chartExample';
+
+import Svg, {
+  Circle,
+  Ellipse,
+  G,
+  TSpan,
+  TextPath,
+  Path,
+  Polygon,
+  Polyline,
+  Line,
+  Rect,
+  Use,
+  Image,
+  Symbol,
+  Defs,
+  LinearGradient,
+  RadialGradient,
+  Stop,
+  ClipPath,
+  Pattern,
+  Mask,
+  SvgUri
+} from 'react-native-svg';
+
+
+
 
 export default function App() {
 
@@ -15,6 +49,8 @@ const settings =
   rightColor: '#239F',
   borderWidth:1, 
 }
+
+
 
 const Stack = createNativeStackNavigator();
 
@@ -28,13 +64,13 @@ client.onMessageArrived = displayMessage;
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
 const [recieveArr, setRecieveArr] = useState([0,0]);
-
+const [lineData, setLineData] = useState([0]);
   //connected or not indicator.
-const[isconnected, setisconnceted] = useState(false);
+const[isconnected, setisconnceted] = useState(5);
 
-//setting inital message --> this is bad use
-
-setInterval(() => {console.log()}, 1000);
+//this use to poll the host every -x seconds to check if the connection is alive
+//WIP cant figure it out
+//setInterval(() => {{setisconnceted(isconnected + 1); console.log(isconnected)} 1000});
 
 // once connected subscribe to folders needed
 function onConnect()
@@ -61,6 +97,8 @@ function displayMessage(msg)
     let temp = recieveArr;
     temp[0] = msg.payloadString;
     setRecieveArr([...temp]);
+    
+    setLineData([...lineData, parseInt(msg.payloadString)])
     console.log("setL");
   }
   else if (msg.topic === "y")
@@ -126,9 +164,26 @@ const MainPage = ({navigation}) => {
   return (
    
       <View style={styles.container}>
-        <View style={{flex:0.4, alignItems:"center", justifyContent:"center"}}>
-          <Button title='Clear' onPress={() => setMessageList("--")}/>
-          <StatusBar style="auto" />
+        <StatusBar style="auto" />
+
+
+        <View style={{flex:0.4, justifyContent:"center"}}>
+         <LineChartExample></LineChartExample> 
+          {/* <Text>
+            testing
+          </Text>
+
+          <Svg width={(Dimensions.get('window').width)} height="60">
+            <Rect
+              x={recieveArr[0]}
+              y="5"
+              width="50"
+              height="50"
+              fill="rgb(0,0,255)"
+              strokeWidth="3"
+              stroke="rgb(0,0,0)"
+            />
+          </Svg> */}
         </View>
 
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} leftNavPageName="00" rightNavPageName="01" leftMonitorText="Power" rightMonitorText="Outside lights" navigation={navigation}/>
@@ -136,7 +191,7 @@ const MainPage = ({navigation}) => {
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
 
-        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected ? "Connected" : "Not Connected"} </Text>
+        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected < 15 ? "Connected" : "Not Connected"} </Text>
 
       </View>
   );
