@@ -2,7 +2,7 @@
 
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -22,22 +22,32 @@ const Stack = createNativeStackNavigator();
 //mqtt client
 const client = new Client("52.63.111.219",9001,'/mqtt','native');
 client.connect({onSuccess:onConnect});
+client.onConnectionLost = onDisconnect;
 client.onMessageArrived = displayMessage;
 
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
 const [recieveArr, setRecieveArr] = useState([0,0]);
 
+  //connected or not indicator.
+const[isconnected, setisconnceted] = useState(false);
+
 //setting inital message --> this is bad use
 
-
+setInterval(() => {console.log()}, 1000);
 
 // once connected subscribe to folders needed
 function onConnect()
 {
-  //remove testing
+  console.log("connected to server");
+  setisconnceted(true); 
   client.subscribe("x");
   client.subscribe("y");
+}
+
+function onDisconnect()
+{
+  console.log("disconnected");
 }
 
 
@@ -126,7 +136,7 @@ const MainPage = ({navigation}) => {
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
 
-        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : connected/disconnected</Text>
+        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected ? "Connected" : "Not Connected"} </Text>
 
       </View>
   );
@@ -135,10 +145,14 @@ const MainPage = ({navigation}) => {
 
 const SecondPage = (navigation) => {
   return (
-    <Text>Welcome To the Second Page</Text>
+    <View>
+      <Text>Welcome To the Second Page</Text>
+      <Text>Welcome To the Second Page</Text>
+    </View>
   );
 
 }
+
 
   //stack naming convention follows the corresponding 2x6 matrix indexing from 0
   return (
@@ -158,3 +172,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 });
+
+ 
