@@ -5,7 +5,6 @@ import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity } from '
 import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
-import * as React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 export default function App() {
@@ -77,22 +76,35 @@ function toast()
 }
 
 //row status viewer layout
-const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, navigation}) => {
+const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation}) => {
   return (
     <View style={{flex:0.14, flexDirection:"row"}}>
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}} onPress={() => navigation.navigate(leftNavPageName)}>
-        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
-          〄
-        </Text>
-        <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}} > 
+        <View style={{flex:0.5}}>
+          <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
+            〄
+          </Text>
+          <Text style={{textAlign:"center"}}>
+            {leftMonitorText}
+          </Text>
+        </View>
+
+        <Text style={{flex:0.5, textAlign:"center", textAlignVertical:"center", fontSize:30}} > 
           {leftVal}   
         </Text>
       </TouchableOpacity>
+
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => navigation.navigate(rightNavPageName)}>
-        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
+        <View style={{flex:0.5}}>
+          <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           💡
-        </Text>
-        <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}}> 
+          </Text>
+          <Text style={{textAlign:"center"}}>
+            {rightMonitorText} 
+          </Text>
+        </View>
+
+        <Text style={{flex:0.5, textAlign:"center", textAlignVertical:"center", fontSize:30}}> 
           {rightVal}
         </Text>
       </TouchableOpacity>
@@ -109,12 +121,12 @@ const MainPage = ({navigation}) => {
           <StatusBar style="auto" />
         </View>
 
-        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} leftNavPageName="00" rightNavPageName="01" navigation={navigation}/>
+        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} leftNavPageName="00" rightNavPageName="01" leftMonitorText="Power" rightMonitorText="Outside lights" navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
 
-        <Text color="green"> status : connected/disconnected</Text>
+        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : connected/disconnected</Text>
 
       </View>
   );
