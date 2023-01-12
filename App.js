@@ -27,41 +27,38 @@ client.onMessageArrived = displayMessage;
 
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
-let [recieveArr, setRecieveArr] = useState([0,0]);
+const [recieveArr, setRecieveArr] = useState([0,0]);
 
 //setting inital message --> this is bad use
-useEffect(() => {
-  console.log("q");
-},[recieveArr]);  
+
 
 
 // once connected subscribe to folders needed
 function onConnect()
 {
-  client.subscribe("testing");
+  //remove testing
   client.subscribe("x");
   client.subscribe("y");
-
 }
 
 
 function displayMessage(msg)
 {
   console.log(msg.topic)
-  console.log(msg.payloadString);
+  //console.log(msg.payloadString);
   setMessageList(messageList + msg.payloadString);
   if (msg.topic === "x")
   {
     let temp = recieveArr;
-    recieveArr[0] = msg.payloadString;
-    setRecieveArr(temp);
+    temp[0] = msg.payloadString;
+    setRecieveArr([...temp]);
     console.log("setL");
   }
-  if (msg.topic === "y")
+  else if (msg.topic === "y")
   {
     let temp = recieveArr;
-    recieveArr[1] = msg.payloadString;
-    setRecieveArr(temp);
+    temp[1] = msg.payloadString;
+    setRecieveArr([...temp]);
     console.log("setR")
   }
 
