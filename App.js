@@ -1,9 +1,12 @@
+//James Wong 2023
+
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
-
-//James Wong 2023
+import * as React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 export default function App() {
 
@@ -14,26 +17,58 @@ const settings =
   borderWidth:1, 
 }
 
+const Stack = createNativeStackNavigator();
+
+
+//mqtt client
 const client = new Client("52.63.111.219",9001,'/mqtt','native');
 client.connect({onSuccess:onConnect});
 client.onMessageArrived = displayMessage;
 
+//reactive variables
 const [messageList, setMessageList] = useState("empty");
+let [recieveArr, setRecieveArr] = useState([0,0]);
 
+//setting inital message --> this is bad use
 useEffect(() => {
-  setMessageList("connected");
-},[]);  
+  console.log("q");
+},[recieveArr]);  
 
+
+// once connected subscribe to folders needed
 function onConnect()
 {
   client.subscribe("testing");
+  client.subscribe("x");
+  client.subscribe("y");
+
 }
+
 
 function displayMessage(msg)
 {
   console.log(msg.topic)
   console.log(msg.payloadString);
-  setMessageList(messageList + "\n" + msg.payloadString);
+  setMessageList(messageList + msg.payloadString);
+  if (msg.topic === "x")
+  {
+    let temp = recieveArr;
+    recieveArr[0] = msg.payloadString;
+    setRecieveArr(temp);
+    console.log("setL");
+  }
+  if (msg.topic === "y")
+  {
+    let temp = recieveArr;
+    recieveArr[1] = msg.payloadString;
+    setRecieveArr(temp);
+    console.log("setR")
+  }
+
+  console.log(recieveArr);
+  //msg.topic ? "x" : setRecieveArr(recieveArr)
+  //want to make it more declaritive with this and spread operator
+
   //case by case topic sorted assignment
   //if topic => do this
 }
@@ -45,49 +80,66 @@ function toast()
 }
 
 //row status viewer layout
-const Row = ({color1, color2}) => {
+const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, navigation}) => {
   return (
     <View style={{flex:0.14, flexDirection:"row"}}>
-      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}}>
-        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center"}}> 
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}} onPress={() => navigation.navigate(leftNavPageName)}>
+        <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           〄
         </Text>
         <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}} > 
-          $$val$$
+          {leftVal}   
         </Text>
       </TouchableOpacity>
-      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => toast()}>
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => navigation.navigate(rightNavPageName)}>
         <Text style={{flex:0.4, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           💡
         </Text>
         <Text style={{flex:0.6, textAlign:"center", textAlignVertical:"center"}}> 
-          status
+          {rightVal}
         </Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-
-
-
+const MainPage = ({navigation}) => {
   return (
-    <View style={styles.container}>
-      <View style={{flex:0.4, alignItems:"center", justifyContent:"center"}}>
-        <Button title='Clear' onPress={() => setMessageList("--")}/>
-        <Text>{messageList}</Text>
-        <StatusBar style="auto" />
+   
+      <View style={styles.container}>
+        <View style={{flex:0.4, alignItems:"center", justifyContent:"center"}}>
+          <Button title='Clear' onPress={() => setMessageList("--")}/>
+          <StatusBar style="auto" />
+        </View>
+
+        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} leftNavPageName="00" rightNavPageName="01" navigation={navigation}/>
+        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
+        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
+        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
+
+        <Text color="green"> status : connected/disconnected</Text>
+
       </View>
+  );
 
-      <Row color1="blue" color2="pink"/>
-      <Row color1="blue" color2="pink"/>
-      <Row color1="blue" color2="pink"/>
-      <Row color1="blue" color2="pink"/>
+}
 
-      <Text color="green"> status : connected/disconnected</Text>
+const SecondPage = (navigation) => {
+  return (
+    <Text>Welcome To the Second Page</Text>
+  );
 
-    </View>
+}
 
+  //stack naming convention follows the corresponding 2x6 matrix indexing from 0
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="monitor" component={MainPage} options={{title:"Mointor"}}/>
+        <Stack.Screen name="00" component={SecondPage} options={{title:"Control First top Left"}}/>
+        <Stack.Screen name="01" component={SecondPage} options={{title:"Control Light 1"}}/>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
