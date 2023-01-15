@@ -9,10 +9,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import PureChart from 'react-native-pure-chart-bar-kit';
 
-import React from 'react';
 import { AreaChart, LineChart, Grid} from 'react-native-svg-charts';
 
-import LineChartExample from './components/chartExample';
+import DecoratorExample from './components/chartExample';
 
 import Svg, {
   Circle,
@@ -56,41 +55,54 @@ const Stack = createNativeStackNavigator();
 
 
 //mqtt client
-const client = new Client("52.63.111.219",9001,'/mqtt','native');
-client.connect({onSuccess:onConnect});
-client.onConnectionLost = onDisconnect;
+const client = new Client("52.63.111.219",8080,'/mqtt','native');
+client.onConnectionLost = onConnectionLost;
+client.on = onDisconnect; 
 client.onMessageArrived = displayMessage;
+
+
+client.connect({
+  onSuccess:onConnect,
+  // mqttVersion:3,
+});
 
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
 const [recieveArr, setRecieveArr] = useState([0,0]);
 const [lineData, setLineData] = useState([0]);
   //connected or not indicator.
-const[isconnected, setisconnceted] = useState(5);
+const[isconnected, setisconnceted] = useState(20);
 
 //this use to poll the host every -x seconds to check if the connection is alive
 //WIP cant figure it out
 //setInterval(() => {{setisconnceted(isconnected + 1); console.log(isconnected)} 1000});
 
 // once connected subscribe to folders needed
-function onConnect()
+function onConnect(responseObj)
 {
   console.log("connected to server");
-  setisconnceted(true); 
+  console.log(responseObj);
   client.subscribe("x");
-  client.subscribe("y");
+  // client.subscribe("y");
 }
 
-function onDisconnect()
+function onDisconnect(responseObj)
 {
   console.log("disconnected");
+  console.log(responseObj);
+}
+
+function onConnectionLost(responseObj)
+{
+  console.log("connection Lost");
+  console.log(responseObj);
 }
 
 
 function displayMessage(msg)
 {
-  console.log(msg.topic)
-  //console.log(msg.payloadString);
+  console.log(msg.topic);
+  console.log(msg.payloadString);
   setMessageList(messageList + msg.payloadString);
   if (msg.topic === "x")
   {
@@ -98,7 +110,7 @@ function displayMessage(msg)
     temp[0] = msg.payloadString;
     setRecieveArr([...temp]);
     
-    setLineData([...lineData, parseInt(msg.payloadString)])
+    setLineData([...lineData, parseInt(msg.payloadString)]);
     console.log("setL");
   }
   else if (msg.topic === "y")
@@ -106,7 +118,7 @@ function displayMessage(msg)
     let temp = recieveArr;
     temp[1] = msg.payloadString;
     setRecieveArr([...temp]);
-    console.log("setR")
+    console.log("setR");
   }
 
   console.log(recieveArr);
@@ -117,20 +129,14 @@ function displayMessage(msg)
   //if topic => do this
 }
 
-
-function toast()
-{
-  ToastAndroid.show("testing", ToastAndroid.SHORT);
-}
-
 //row status viewer layout
-const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation}) => {
+const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation, iconLeft="〄",iconRight="💡" }) => {
   return (
     <View style={{flex:0.14, flexDirection:"row"}}>
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}} onPress={() => navigation.navigate(leftNavPageName)}>
         <View style={{flex:0.5}}>
           <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
-            〄
+            {iconLeft}
           </Text>
           <Text style={{textAlign:"center"}}>
             {leftMonitorText}
@@ -145,7 +151,7 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => navigation.navigate(rightNavPageName)}>
         <View style={{flex:0.5}}>
           <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
-          💡
+          {iconRight}
           </Text>
           <Text style={{textAlign:"center"}}>
             {rightMonitorText} 
@@ -168,7 +174,10 @@ const MainPage = ({navigation}) => {
 
 
         <View style={{flex:0.4, justifyContent:"center"}}>
-         <LineChartExample></LineChartExample> 
+          <View style={{padding:20}}>
+            <DecoratorExample data={lineData}></DecoratorExample>
+          </View>
+
           {/* <Text>
             testing
           </Text>
@@ -186,8 +195,26 @@ const MainPage = ({navigation}) => {
           </Svg> */}
         </View>
 
-        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} leftNavPageName="00" rightNavPageName="01" leftMonitorText="Power" rightMonitorText="Outside lights" navigation={navigation}/>
-        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
+        <Row leftVal={
+          recieveArr[0]}
+          rightVal={recieveArr[1]} 
+          leftNavPageName="00"
+          rightNavPageName="01"
+          leftMonitorText="Power" 
+          rightMonitorText="Outside lights" 
+          navigation={navigation}
+          />
+        <Row leftVal={
+          recieveArr[0]}
+          rightVal={recieveArr[1]} 
+          leftNavPageName="01"
+          rightNavPageName="11"
+          leftMonitorText="Temperature" 
+          rightMonitorText="Inside lights?" 
+          navigation={navigation}
+          iconLeft='🌡'
+          iconRight=''
+          />
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
         <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
 
@@ -205,10 +232,23 @@ const SecondPage = (navigation) => {
       <Text>Welcome To the Second Page</Text>
     </View>
   );
-
 }
 
+const ThirdPage = (navigation) => {
+  return (
+    <View>
+      <Text> third page </Text>
+    </View>
+  );
+}
 
+const temperaturePage = (navigation) => {
+  return (
+    <View>
+      <Text> third page </Text>
+    </View>
+  );
+}
   //stack naming convention follows the corresponding 2x6 matrix indexing from 0
   return (
     <NavigationContainer>
@@ -216,6 +256,8 @@ const SecondPage = (navigation) => {
         <Stack.Screen name="monitor" component={MainPage} options={{title:"Mointor"}}/>
         <Stack.Screen name="00" component={SecondPage} options={{title:"Control First top Left"}}/>
         <Stack.Screen name="01" component={SecondPage} options={{title:"Control Light 1"}}/>
+        <Stack.Screen name="10" component={temperaturePage} options={{title:"Temperature"}}/>
+        <Stack.Screen name="11" component={ThirdPage} options={{title:"Control Light 2"}}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
