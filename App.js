@@ -1,41 +1,19 @@
 //James Wong 2023
 
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import PureChart from 'react-native-pure-chart-bar-kit';
-
 import { AreaChart, LineChart, Grid} from 'react-native-svg-charts';
+
 
 import DecoratorExample from './components/chartExample';
 
-import Svg, {
-  Circle,
-  Ellipse,
-  G,
-  TSpan,
-  TextPath,
-  Path,
-  Polygon,
-  Polyline,
-  Line,
-  Rect,
-  Use,
-  Image,
-  Symbol,
-  Defs,
-  LinearGradient,
-  RadialGradient,
-  Stop,
-  ClipPath,
-  Pattern,
-  Mask,
-  SvgUri
-} from 'react-native-svg';
+import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-icons"
+
 
 
 
@@ -134,8 +112,9 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
   return (
     <View style={{flex:0.14, flexDirection:"row"}}>
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}} onPress={() => navigation.navigate(leftNavPageName)}>
+
         <View style={{flex:0.5}}>
-          <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
+          <Text style={{flex:1, textAlign:"center", textAlignVertical:"center"}}> 
             {iconLeft}
           </Text>
           <Text style={{textAlign:"center"}}>
@@ -167,6 +146,9 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
 }
 
 const MainPage = ({navigation}) => {
+
+  const iconSize = 75;
+
   return (
    
       <View style={styles.container}>
@@ -178,45 +160,54 @@ const MainPage = ({navigation}) => {
             <DecoratorExample data={lineData}></DecoratorExample>
           </View>
 
-          {/* <Text>
-            testing
-          </Text>
-
-          <Svg width={(Dimensions.get('window').width)} height="60">
-            <Rect
-              x={recieveArr[0]}
-              y="5"
-              width="50"
-              height="50"
-              fill="rgb(0,0,255)"
-              strokeWidth="3"
-              stroke="rgb(0,0,0)"
-            />
-          </Svg> */}
         </View>
 
-        <Row leftVal={
-          recieveArr[0]}
+        <Row 
+          leftVal={recieveArr[0]}
           rightVal={recieveArr[1]} 
           leftNavPageName="00"
           rightNavPageName="01"
           leftMonitorText="Power" 
           rightMonitorText="Outside lights" 
           navigation={navigation}
+          iconLeft={<Feather name='battery-charging' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
           />
-        <Row leftVal={
-          recieveArr[0]}
+        <Row 
+          leftVal={recieveArr[0]}
+          rightVal={recieveArr[1]} 
+          leftNavPageName="01"
+          rightNavPageName="11"
+          leftMonitorText="Voltage" 
+          rightMonitorText="Inside lights?" 
+          navigation={navigation}
+          iconLeft={<SimpleLineIcons name='energy' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          />
+
+        <Row 
+          leftVal={recieveArr[0]}
           rightVal={recieveArr[1]} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Temperature" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
-          iconLeft='🌡'
-          iconRight=''
+          iconLeft={<Ionicons name='ios-thermometer-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
           />
-        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
-        <Row leftVal={recieveArr[0]} rightVal={recieveArr[1]} navigation={navigation}/>
+
+        <Row 
+          leftVal={recieveArr[0]}
+          rightVal={recieveArr[1]} 
+          leftNavPageName="01"
+          rightNavPageName="11"
+          leftMonitorText="Timer" 
+          rightMonitorText="Inside lights?" 
+          navigation={navigation}
+          iconLeft={<Ionicons name='timer-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          />
 
         <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected < 15 ? "Connected" : "Not Connected"} </Text>
 
@@ -242,7 +233,7 @@ const ThirdPage = (navigation) => {
   );
 }
 
-const temperaturePage = (navigation) => {
+const TemperaturePage = (navigation) => {
   return (
     <View>
       <Text> third page </Text>
@@ -254,10 +245,14 @@ const temperaturePage = (navigation) => {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="monitor" component={MainPage} options={{title:"Mointor"}}/>
+
         <Stack.Screen name="00" component={SecondPage} options={{title:"Control First top Left"}}/>
         <Stack.Screen name="01" component={SecondPage} options={{title:"Control Light 1"}}/>
-        <Stack.Screen name="10" component={temperaturePage} options={{title:"Temperature"}}/>
+
+        <Stack.Screen name="10" component={TemperaturePage} options={{title:"Temperature"}}/>
         <Stack.Screen name="11" component={ThirdPage} options={{title:"Control Light 2"}}/>
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );
