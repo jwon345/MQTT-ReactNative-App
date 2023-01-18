@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
-import {Client} from 'paho-mqtt';
+import {Client, Message} from 'paho-mqtt';
+
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AreaChart, LineChart, Grid} from 'react-native-svg-charts';
@@ -35,13 +36,13 @@ const Stack = createNativeStackNavigator();
 //mqtt client
 const client = new Client("52.63.111.219",8080,'/mqtt','native');
 client.onConnectionLost = onConnectionLost;
-client.on = onDisconnect; 
 client.onMessageArrived = displayMessage;
 
 
 client.connect({
   onSuccess:onConnect,
-  // mqttVersion:3,
+  reconnect:false,
+  mqttVersion:4,
 });
 
 //reactive variables
@@ -60,8 +61,8 @@ function onConnect(responseObj)
 {
   console.log("connected to server");
   console.log(responseObj);
-  client.subscribe("x");
-  // client.subscribe("y");
+
+  client.subscribe("tempVal");
 }
 
 function onDisconnect(responseObj)
@@ -97,6 +98,23 @@ function displayMessage(msg)
     temp[1] = msg.payloadString;
     setRecieveArr([...temp]);
     console.log("setR");
+  }
+  else if (msg.topic === "tempVal")
+  {
+    let temp = recieveArr;
+    temp[2] = msg.payloadString;
+    setRecieveArr([...temp]);
+    console.log("setTemp");
+
+    if (lineData.length < 25)
+    {
+      setLineData([...lineData, parseInt(msg.payloadString)]);
+    }
+    else
+    {
+      lineData.shift()
+      setLineData([...lineData, parseInt(msg.payloadString)]);
+    }
   }
 
   console.log(recieveArr);
@@ -186,7 +204,7 @@ const MainPage = ({navigation}) => {
           />
 
         <Row 
-          leftVal={recieveArr[0]}
+          leftVal={recieveArr[2]} 
           rightVal={recieveArr[1]} 
           leftNavPageName="01"
           rightNavPageName="11"
@@ -216,11 +234,36 @@ const MainPage = ({navigation}) => {
 
 }
 
+function sendMsg(sendString, Topic)
+{
+  let msg = new Message(sendString);
+  msg.destinationName = Topic;
+  client.send(msg);
+}
+
 const SecondPage = (navigation) => {
+
+
   return (
     <View>
-      <Text>Welcome To the Second Page</Text>
-      <Text>Welcome To the Second Page</Text>
+      <View style={{margin:10}}>
+        <Button title='switch 1 off' onPress={() => sendMsg("0" , "setLight1")}/>
+      </View>
+      <View style={{margin:10}}>
+        <Button title='switch 1 on' onPress={() => sendMsg("1" , "setLight1")}/>
+      </View>
+      <View style={{margin:10}}>
+        <Button title='switch 2 off' onPress={() => sendMsg("0" , "setLight2")}/>
+      </View>
+      <View style={{margin:10}}>
+        <Button title='switch 2 on' onPress={() => sendMsg("1" , "setLight2")}/>
+      </View>
+      <View style={{margin:10}}>
+        <Button title='switch 3 off' onPress={() => sendMsg("0" , "setLight3")}/>
+      </View>
+      <View style={{margin:10}}>
+        <Button title='switch 3 on' onPress={() => sendMsg("1" , "setLight3")}/>
+      </View>
     </View>
   );
 }
