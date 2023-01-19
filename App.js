@@ -2,7 +2,7 @@
 
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client, Message} from 'paho-mqtt';
 
@@ -21,12 +21,13 @@ import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-ic
 
 export default function App() {
 
-const settings =
-{
+const settings ={
   leftColor: '#239F',
   rightColor: '#239F',
-  borderWidth:1, 
+  borderWidth:1,
 }
+   
+
 
 
 
@@ -34,16 +35,8 @@ const Stack = createNativeStackNavigator();
 
 
 //mqtt client
-const client = new Client("52.63.111.219",8080,'/mqtt','native');
-client.onConnectionLost = onConnectionLost;
-client.onMessageArrived = displayMessage;
 
 
-client.connect({
-  onSuccess:onConnect,
-  reconnect:false,
-  mqttVersion:4,
-});
 
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
@@ -56,15 +49,58 @@ const[isconnected, setisconnceted] = useState(20);
 //WIP cant figure it out
 //setInterval(() => {{setisconnceted(isconnected + 1); console.log(isconnected)} 1000});
 
+const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
+//client.onMessageDelivered
+
+useEffect(() => {
+  console.log("SDLKJSDFLKJDF");
+  client.connect({
+    onSuccess:onConnect,
+    onFailure:onDisconnect,
+    reconnect:false,
+    mqttVersion:4
+  });
+
+
+}, [])
+
 // once connected subscribe to folders needed
-function onConnect(responseObj)
-{
+function onConnect(responseObj){
   console.log("connected to server");
   console.log(responseObj);
+
+  client.onConnectionLost = onConnectionLost;
+  client.onMessageArrived = displayMessage;
 
   client.subscribe("tempVal");
 }
 
+sendMsg = (thisClient, sendString, Topic) => {
+
+  console.log(client.isConnected());
+  if (!client.isConnected())
+  {
+    console.log("Need to reconnect");
+    try {
+    client.connect(); 
+    } catch (error) {
+    console.log("cant connect"); 
+    }
+  }
+
+  if (client.isConnected())
+  {
+    client.send("test","test");
+  }
+  
+  // const client = new Client("52.63.111.219",8080,'/mqtt','native');
+  //thisClient.connect();
+  // let msg = new Message(sendString, state="");
+  // msg.destinationName = Topic;
+  // client.send("test","test");
+
+}
+  
 function onDisconnect(responseObj)
 {
   console.log("disconnected");
@@ -115,15 +151,19 @@ function displayMessage(msg)
       lineData.shift()
       setLineData([...lineData, parseInt(msg.payloadString)]);
     }
+
   }
 
   console.log(recieveArr);
   //msg.topic ? "x" : setRecieveArr(recieveArr)
   //want to make it more declaritive with this and spread operator
 
+  // sendMsg("asdf", "tesing");
+
   //case by case topic sorted assignment
   //if topic => do this
 }
+
 
 //row status viewer layout
 const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation, iconLeft="〄",iconRight="💡" }) => {
@@ -145,7 +185,8 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => navigation.navigate(rightNavPageName)}>
+ {/* navigation.navigate(rightNavPageName) */}
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => {ToastAndroid.show("test", ToastAndroid.SHORT); sendMsg(client, "??", "??")}}>
         <View style={{flex:0.5}}>
           <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           {iconRight}
@@ -228,18 +269,12 @@ const MainPage = ({navigation}) => {
           />
 
         <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected < 15 ? "Connected" : "Not Connected"} </Text>
-
+        <Text style={{textAlign:'center'}}>{client.isConnected() ?  "connected" : "Not connected"}</Text>
       </View>
   );
 
 }
 
-function sendMsg(sendString, Topic)
-{
-  let msg = new Message(sendString);
-  msg.destinationName = Topic;
-  client.send(msg);
-}
 
 const SecondPage = (navigation) => {
 
