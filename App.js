@@ -1,10 +1,11 @@
 //James Wong 2023
 
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image , AsyncStorage} from 'react-native';
 import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client, Message} from 'paho-mqtt';
+import init from 'react_native_mqtt';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -16,32 +17,35 @@ import DecoratorExample from './components/chartExample';
 import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-icons"
 
 
-
-
+const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
 
 export default function App() {
+
+init({
+  size: 10000,
+  storageBackend: AsyncStorage,
+  defaultExpires: 1000 * 3600 * 24,
+  enableCache: true,
+  reconnect: true,
+  sync : {
+  }
+});
 
 const settings ={
   leftColor: '#239F',
   rightColor: '#239F',
   borderWidth:1,
 }
-   
 
-
-
-
+// react page navigation 
 const Stack = createNativeStackNavigator();
-
 
 //mqtt client
 
-
-
 //reactive variables
 const [messageList, setMessageList] = useState("empty");
-const [recieveArr, setRecieveArr] = useState([0,0]);
-const [lineData, setLineData] = useState([0]);
+const [recieveArr, setRecieveArr] = useState([0,0,0,0]);
+const [lineData, setLineData] = useState([0.0]);
   //connected or not indicator.
 const[isconnected, setisconnceted] = useState(20);
 
@@ -49,58 +53,66 @@ const[isconnected, setisconnceted] = useState(20);
 //WIP cant figure it out
 //setInterval(() => {{setisconnceted(isconnected + 1); console.log(isconnected)} 1000});
 
-const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
+//two clients. one for listening and one for sending
 //client.onMessageDelivered
 
 useEffect(() => {
-  console.log("SDLKJSDFLKJDF");
+  console.log("Init");
   client.connect({
     onSuccess:onConnect,
     onFailure:onDisconnect,
     reconnect:false,
-    mqttVersion:4
   });
 
+  client.onConnectionLost = onConnectionLost;
+  client.onMessageArrived = displayMessage;
 
 }, [])
+
+
+//updating the line graph 
+useEffect(() => {
+  console.log("new data");
+   
+
+}, [recieveArr])
+
+
 
 // once connected subscribe to folders needed
 function onConnect(responseObj){
   console.log("connected to server");
   console.log(responseObj);
-
-  client.onConnectionLost = onConnectionLost;
-  client.onMessageArrived = displayMessage;
-
   client.subscribe("tempVal");
 }
 
-sendMsg = (thisClient, sendString, Topic) => {
+sendMsg = (sendString, Topic, clientInstance) => {
+  clientInstance.send(Topic, sendString);
+}
+  
+tempsendMsg = (sendString, Topic) => {
 
-  console.log(client.isConnected());
-  if (!client.isConnected())
+  var client = new Client("52.63.111.219",8080,'/mqtt', 'native-sender-' + parseInt(Math.random()*100000));
+  client.connect();
+
+  if(!client.isConnected())
   {
     console.log("Need to reconnect");
     try {
-    client.connect(); 
+    client.send(sendString, Topic);
     } catch (error) {
-    console.log("cant connect"); 
+    console.log("cant connect" + error); 
     }
   }
 
   if (client.isConnected())
   {
-    client.send("test","test");
+    client.send(Topic,sendString);
+    console.log("sent");
   }
-  
-  // const client = new Client("52.63.111.219",8080,'/mqtt','native');
-  //thisClient.connect();
-  // let msg = new Message(sendString, state="");
-  // msg.destinationName = Topic;
-  // client.send("test","test");
+  client.disconnect();
 
 }
-  
 function onDisconnect(responseObj)
 {
   console.log("disconnected");
@@ -154,7 +166,7 @@ function displayMessage(msg)
 
   }
 
-  console.log(recieveArr);
+  // console.log(recieveArr);
   //msg.topic ? "x" : setRecieveArr(recieveArr)
   //want to make it more declaritive with this and spread operator
 
@@ -186,7 +198,7 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
       </TouchableOpacity>
 
  {/* navigation.navigate(rightNavPageName) */}
-      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => {ToastAndroid.show("test", ToastAndroid.SHORT); sendMsg(client, "??", "??")}}>
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => { sendMsg('1', "test", client)}}>
         <View style={{flex:0.5}}>
           <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           {iconRight}
@@ -268,8 +280,7 @@ const MainPage = ({navigation}) => {
           iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
           />
 
-        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected < 15 ? "Connected" : "Not Connected"} </Text>
-        <Text style={{textAlign:'center'}}>{client.isConnected() ?  "connected" : "Not connected"}</Text>
+        <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected ? "Connected" : "Not Connected"} </Text>
       </View>
   );
 
