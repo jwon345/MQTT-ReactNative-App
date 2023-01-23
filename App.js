@@ -1,18 +1,14 @@
 //James Wong 2023
 
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Dimensions, Image , AsyncStorage} from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Vibration} from 'react-native';
 import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
-import {Client, Message} from 'paho-mqtt';
-import init from 'react_native_mqtt';
+import {Client} from 'paho-mqtt';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { AreaChart, LineChart, Grid} from 'react-native-svg-charts';
-
-
-import DecoratorExample from './components/chartExample';
+// import DecoratorExample from './components/chartExample';
 
 import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-icons"
 
@@ -20,16 +16,6 @@ import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-ic
 const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
 
 export default function App() {
-
-init({
-  size: 10000,
-  storageBackend: AsyncStorage,
-  defaultExpires: 1000 * 3600 * 24,
-  enableCache: true,
-  reconnect: true,
-  sync : {
-  }
-});
 
 const settings ={
   leftColor: '#239F',
@@ -46,8 +32,9 @@ const Stack = createNativeStackNavigator();
 const [messageList, setMessageList] = useState("empty");
 const [recieveArr, setRecieveArr] = useState([0,0,0,0]);
 const [lineData, setLineData] = useState([0.0]);
+const [lightArrayState, setLightArray] = useState([0,0,0,0]);
   //connected or not indicator.
-const[isconnected, setisconnceted] = useState(20);
+const[isconnected, setisconnceted] = useState(false);
 
 //this use to poll the host every -x seconds to check if the connection is alive
 //WIP cant figure it out
@@ -61,7 +48,7 @@ useEffect(() => {
   client.connect({
     onSuccess:onConnect,
     onFailure:onDisconnect,
-    reconnect:false,
+    reconnect:true,
   });
 
   client.onConnectionLost = onConnectionLost;
@@ -72,65 +59,61 @@ useEffect(() => {
 
 //updating the line graph 
 useEffect(() => {
-  console.log("new data");
-   
+  // do some new data stuff.
 
 }, [recieveArr])
 
+useEffect(() => {
+  // do some new data stuff.
+  console.log(lightArrayState);
+}, [lightArrayState])
 
 
 // once connected subscribe to folders needed
 function onConnect(responseObj){
   console.log("connected to server");
-  console.log(responseObj);
   client.subscribe("tempVal");
+  client.subscribe("x");
+  client.subscribe("light");
+  setisconnceted(true);
 }
 
-sendMsg = (sendString, Topic, clientInstance) => {
-  clientInstance.send(Topic, sendString);
+sendMsg = (sendString, Topic) => {
+  client.send(Topic, sendString);
 }
-  
-tempsendMsg = (sendString, Topic) => {
 
-  var client = new Client("52.63.111.219",8080,'/mqtt', 'native-sender-' + parseInt(Math.random()*100000));
-  client.connect();
-
-  if(!client.isConnected())
-  {
-    console.log("Need to reconnect");
-    try {
-    client.send(sendString, Topic);
-    } catch (error) {
-    console.log("cant connect" + error); 
-    }
-  }
-
-  if (client.isConnected())
-  {
-    client.send(Topic,sendString);
-    console.log("sent");
-  }
-  client.disconnect();
-
+function lightToggle(toggleIndex)
+{
+  temp = [...lightArrayState];
+  temp[toggleIndex] = (temp[toggleIndex] == 0 ? 1:0);
+  console.log(temp);
+  console.log(temp.join(''));
+  console.log(parseInt(temp.join(''), 2).toString(16));
+  sendMsg(parseInt(temp.join(''), 2).toString(16), "setLight")
 }
+
 function onDisconnect(responseObj)
 {
+  setisconnceted(false);
   console.log("disconnected");
   console.log(responseObj);
 }
 
 function onConnectionLost(responseObj)
 {
+  setisconnceted(false);
   console.log("connection Lost");
   console.log(responseObj);
 }
 
 
-function displayMessage(msg)
+async function displayMessage(msg)
 {
-  console.log(msg.topic);
-  console.log(msg.payloadString);
-  setMessageList(messageList + msg.payloadString);
+  // console.log(msg.topic);
+  // console.log(msg.payloadString);
+
+  //make this a switch case
+
   if (msg.topic === "x")
   {
     let temp = recieveArr;
@@ -140,19 +123,22 @@ function displayMessage(msg)
     setLineData([...lineData, parseInt(msg.payloadString)]);
     console.log("setL");
   }
-  else if (msg.topic === "y")
+  else if (msg.topic === "light")
   {
     let temp = recieveArr;
     temp[1] = msg.payloadString;
     setRecieveArr([...temp]);
-    console.log("setR");
+
+    setLightArray(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+    // console.log(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+    // console.log({lightArrayState});
+    // console.log(lightArrayState);
   }
   else if (msg.topic === "tempVal")
   {
     let temp = recieveArr;
     temp[2] = msg.payloadString;
     setRecieveArr([...temp]);
-    console.log("setTemp");
 
     if (lineData.length < 25)
     {
@@ -160,6 +146,7 @@ function displayMessage(msg)
     }
     else
     {
+      //removes the first index of the list
       lineData.shift()
       setLineData([...lineData, parseInt(msg.payloadString)]);
     }
@@ -178,7 +165,7 @@ function displayMessage(msg)
 
 
 //row status viewer layout
-const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation, iconLeft="〄",iconRight="💡" }) => {
+const Row = ({leftVal, rightVal, leftNavPageName, toggleIndex, leftMonitorText="unassinged", rightMonitorText="unassinged", navigation, iconLeft="〄",iconRight="💡" }) => {
   return (
     <View style={{flex:0.14, flexDirection:"row"}}>
       <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth  ,borderColor:settings.leftColor, flexDirection: "row"}} onPress={() => navigation.navigate(leftNavPageName)}>
@@ -198,7 +185,7 @@ const Row = ({leftVal, rightVal, leftNavPageName, rightNavPageName, leftMonitorT
       </TouchableOpacity>
 
  {/* navigation.navigate(rightNavPageName) */}
-      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => { sendMsg('1', "test", client)}}>
+      <TouchableOpacity style={{flex:0.5, borderWidth:settings.borderWidth , borderColor:settings.rightColor, flexDirection:"row",}} onPress={() => { lightToggle(toggleIndex); Vibration.vibrate(15)}}>
         <View style={{flex:0.5}}>
           <Text style={{flex:1, textAlign:"center", textAlignVertical:"center", fontSize:70}}> 
           {iconRight}
@@ -228,56 +215,61 @@ const MainPage = ({navigation}) => {
 
         <View style={{flex:0.4, justifyContent:"center"}}>
           <View style={{padding:20}}>
-            <DecoratorExample data={lineData}></DecoratorExample>
+            {/* <DecoratorExample data={lineData}></DecoratorExample> */}
+            <Text>Find a good chart for react native...</Text>
           </View>
 
         </View>
 
         <Row 
           leftVal={recieveArr[0]}
-          rightVal={recieveArr[1]} 
+          rightVal={lightArrayState[0] == 1 ? "ON" : "OFF"} 
           leftNavPageName="00"
           rightNavPageName="01"
           leftMonitorText="Power" 
           rightMonitorText="Outside lights" 
           navigation={navigation}
           iconLeft={<Feather name='battery-charging' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[0] == 1 ? "green" : "black"}/>}
+          toggleIndex={0}
           />
         <Row 
           leftVal={recieveArr[0]}
-          rightVal={recieveArr[1]} 
+          rightVal={lightArrayState[1] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Voltage" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<SimpleLineIcons name='energy' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize}  color={lightArrayState[1] == 1 ? "blue" : "black"}/>}
+          toggleIndex={1}
           />
 
         <Row 
-          leftVal={recieveArr[2]} 
-          rightVal={recieveArr[1]} 
+          leftVal={recieveArr[2][0] + recieveArr[2][1] + "." + recieveArr[2][2] + recieveArr[2][3] + "°c" } 
+          rightVal={lightArrayState[2] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Temperature" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<Ionicons name='ios-thermometer-outline' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[2] == 1 ? "blue" : "black"}/>}
+          toggleIndex={2}
           />
 
         <Row 
           leftVal={recieveArr[0]}
-          rightVal={recieveArr[1]} 
+          rightVal={lightArrayState[3] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Timer" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<Ionicons name='timer-outline' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color="black"/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[3] == 1 ? "yellow" : "black"}/>}
+          toggleIndex={3}
           />
 
         <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected ? "Connected" : "Not Connected"} </Text>

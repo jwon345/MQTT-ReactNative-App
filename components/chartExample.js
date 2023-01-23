@@ -1,7 +1,6 @@
 import React from 'react'
 import { AreaChart, Grid } from 'react-native-svg-charts'
 import { Circle, Path } from 'react-native-svg'
-import {useState} from 'react';
 
 const dotColor = 'rgb(100,255,255)';
 const lineColor = 'rgb(100,255,255)';
