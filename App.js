@@ -1,16 +1,18 @@
 //James Wong 2023
 
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Vibration} from 'react-native';
+import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Vibration, Dimensions} from 'react-native';
 import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
 import {Client} from 'paho-mqtt';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// import DecoratorExample from './components/chartExample';
-
 import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-icons"
+
+import { LineChart } from 'react-native-chart-kit';
+
+// import { LineGraph } from 'react-native-graph'
 
 
 const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
@@ -22,6 +24,7 @@ const settings ={
   rightColor: '#239F',
   borderWidth:1,
 }
+
 
 // react page navigation 
 const Stack = createNativeStackNavigator();
@@ -35,6 +38,11 @@ const [lineData, setLineData] = useState([0.0]);
 const [lightArrayState, setLightArray] = useState([0,0,0,0]);
   //connected or not indicator.
 const[isconnected, setisconnceted] = useState(false);
+
+const [newLineData, setNewLineData] = useState("1234");
+const [msgTopic, setMsgTopic] = useState("");
+const [msgData, setMsgData] = useState(0);
+
 
 //this use to poll the host every -x seconds to check if the connection is alive
 //WIP cant figure it out
@@ -57,15 +65,72 @@ useEffect(() => {
 }, [])
 
 
-//updating the line graph 
+// updating the line graph 
+useEffect(()=> {
+
+   const rubbishData = () => {
+    // do some new data stuff.
+    if (msgTopic === "x")
+    {
+      let temp = recieveArr;
+      temp[0] = msgData;
+      setRecieveArr([...temp]);
+    
+      let temp2 = lineData;
+      setLineData([...temp2, parseInt(msg.payloadString)]);
+      console.log("setL");
+    }
+    else if (msgTopic === "light")
+    {
+      let temp = recieveArr;
+      temp[1] = msgData;
+      setRecieveArr([...temp]);
+
+      setLightArray(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+      // console.log(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+      // console.log({lightArrayState});
+      // console.log(lightArrayState);
+    }
+    else if (msgTopic === "tempVal")
+    {
+      let temp = recieveArr;
+      temp[2] = msgData;
+      setRecieveArr([...temp]);
+      if (msgData > 1500)
+      {
+        if (lineData.length < 20)
+        {
+          // console.log(msgData);
+          let a = [...lineData];  
+          // console.log(a);
+          setLineData([...lineData, parseFloat(msgData/100)]);
+        }
+        else
+        {
+          // console.log("new");
+          //removes the first index of the list
+          let a = lineData;
+          a.shift();
+
+          // console.log(b);
+          // console.log(a);
+          setLineData([...a, parseFloat(msgData / 100)]);
+        }
+      }
+
+      console.log("lineUpdate");
+    }
+
+  }
+
+   
+  rubbishData();
+
+}, [msgData])
+
 useEffect(() => {
   // do some new data stuff.
-
-}, [recieveArr])
-
-useEffect(() => {
-  // do some new data stuff.
-  console.log(lightArrayState);
+  // console.log(lightArrayState);
 }, [lightArrayState])
 
 
@@ -107,51 +172,16 @@ function onConnectionLost(responseObj)
 }
 
 
-async function displayMessage(msg)
+function displayMessage(msg)
 {
   // console.log(msg.topic);
   // console.log(msg.payloadString);
 
   //make this a switch case
+  setMsgTopic(msg.topic);
+  setMsgData(msg.payloadString);
+  
 
-  if (msg.topic === "x")
-  {
-    let temp = recieveArr;
-    temp[0] = msg.payloadString;
-    setRecieveArr([...temp]);
-    
-    setLineData([...lineData, parseInt(msg.payloadString)]);
-    console.log("setL");
-  }
-  else if (msg.topic === "light")
-  {
-    let temp = recieveArr;
-    temp[1] = msg.payloadString;
-    setRecieveArr([...temp]);
-
-    setLightArray(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
-    // console.log(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
-    // console.log({lightArrayState});
-    // console.log(lightArrayState);
-  }
-  else if (msg.topic === "tempVal")
-  {
-    let temp = recieveArr;
-    temp[2] = msg.payloadString;
-    setRecieveArr([...temp]);
-
-    if (lineData.length < 25)
-    {
-      setLineData([...lineData, parseInt(msg.payloadString)]);
-    }
-    else
-    {
-      //removes the first index of the list
-      lineData.shift()
-      setLineData([...lineData, parseInt(msg.payloadString)]);
-    }
-
-  }
 
   // console.log(recieveArr);
   //msg.topic ? "x" : setRecieveArr(recieveArr)
@@ -214,9 +244,50 @@ const MainPage = ({navigation}) => {
 
 
         <View style={{flex:0.4, justifyContent:"center"}}>
-          <View style={{padding:20}}>
+          <View style={{paddingTop:10}}>
             {/* <DecoratorExample data={lineData}></DecoratorExample> */}
-            <Text>Find a good chart for react native...</Text>
+            {/* <Text>Find a good chart for react native...</Text>
+            <Button title='PRESS' onPress={() => Vibration.vibrate(15)}/> */}
+            <LineChart
+            data={{
+              labels: ["-20s", "-15s", "-10s", "-5s"],
+              datasets: [
+                {
+                  data: lineData
+                }
+              ]
+            }}
+            width={Dimensions.get("window").width-40} // from react-native
+            height={280}
+            // yAxisLabel="$"
+            yAxisSuffix="°C"
+            yAxisInterval={5} // optional, defaults to 1
+            xAxisInterval={7}
+            fromNumber={40}
+            fromZero={true}
+            chartConfig={{
+              backgroundColor: "#7FFFFF",
+              backgroundGradientFrom: "#FFFFFF",
+              backgroundGradientTo: "#FFFFFF",
+              decimalPlaces: 1, // optional, defaults to 2dp
+
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: "3",
+                strokeWidth: "2",
+                stroke: "#7FFFFF"
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 3,
+              borderRadius: 6
+            }}
+          />
           </View>
 
         </View>
@@ -242,7 +313,7 @@ const MainPage = ({navigation}) => {
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<SimpleLineIcons name='energy' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize}  color={lightArrayState[1] == 1 ? "blue" : "black"}/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize}  color={lightArrayState[1] == 1 ? "orange" : "black"}/>}
           toggleIndex={1}
           />
 
@@ -345,5 +416,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 });
-
- 
