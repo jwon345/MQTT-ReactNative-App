@@ -1,4 +1,4 @@
-# TO DO   
+# TO DO  
    -update icons -> almost done
    -setup pages
    -implelemt time in the graph

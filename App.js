@@ -4,18 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Vibration, Dimensions} from 'react-native';
 import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
-import {Client} from 'paho-mqtt';
+import {Client, } from 'paho-mqtt';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import {MaterialIcons, SimpleLineIcons, Ionicons, Feather} from "@expo/vector-icons"
+import {MaterialIcons, SimpleLineIcons, Ionicons, Feather, MaterialCommunityIcons} from "@expo/vector-icons"
 
 import { LineChart } from 'react-native-chart-kit';
+import { send } from 'q';
 
-// import { LineGraph } from 'react-native-graph'
-
-
-const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000));
+const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000)); // randomise id int
 
 export default function App() {
 
@@ -25,6 +23,10 @@ const settings ={
   borderWidth:1,
 }
 
+const graphSettings ={
+  spacing: 10,
+}
+
 
 // react page navigation 
 const Stack = createNativeStackNavigator();
@@ -32,14 +34,12 @@ const Stack = createNativeStackNavigator();
 //mqtt client
 
 //reactive variables
-const [messageList, setMessageList] = useState("empty");
 const [recieveArr, setRecieveArr] = useState([0,0,0,0]);
 const [lineData, setLineData] = useState([0.0]);
 const [lightArrayState, setLightArray] = useState([0,0,0,0]);
   //connected or not indicator.
 const[isconnected, setisconnceted] = useState(false);
 
-const [newLineData, setNewLineData] = useState("1234");
 const [msgTopic, setMsgTopic] = useState("");
 const [msgData, setMsgData] = useState(0);
 
@@ -50,6 +50,8 @@ const [msgData, setMsgData] = useState(0);
 
 //two clients. one for listening and one for sending
 //client.onMessageDelivered
+client.onConnectionLost = onConnectionLost;
+client.onMessageArrived = displayMessage; 
 
 useEffect(() => {
   console.log("Init");
@@ -59,8 +61,6 @@ useEffect(() => {
     reconnect:true,
   });
 
-  client.onConnectionLost = onConnectionLost;
-  client.onMessageArrived = displayMessage;
 
 }, [])
 
@@ -68,17 +68,13 @@ useEffect(() => {
 // updating the line graph 
 useEffect(()=> {
 
-   const rubbishData = () => {
+   const rubbishData = async()=> {
     // do some new data stuff.
-    if (msgTopic === "x")
+    if (msgTopic === "sensor")
     {
       let temp = recieveArr;
       temp[0] = msgData;
       setRecieveArr([...temp]);
-    
-      let temp2 = lineData;
-      setLineData([...temp2, parseInt(msg.payloadString)]);
-      console.log("setL");
     }
     else if (msgTopic === "light")
     {
@@ -119,8 +115,10 @@ useEffect(()=> {
       }
 
       console.log("lineUpdate");
+
     }
 
+    return;
   }
 
    
@@ -133,14 +131,16 @@ useEffect(() => {
   // console.log(lightArrayState);
 }, [lightArrayState])
 
-
 // once connected subscribe to folders needed
 function onConnect(responseObj){
   console.log("connected to server");
   client.subscribe("tempVal");
-  client.subscribe("x");
+  client.subscribe("sensor")
   client.subscribe("light");
   setisconnceted(true);
+
+  sendMsg(String(parseInt(Math.random() * 1000)), "newClient"); 
+
 }
 
 sendMsg = (sendString, Topic) => {
@@ -174,23 +174,54 @@ function onConnectionLost(responseObj)
 
 function displayMessage(msg)
 {
-  // console.log(msg.topic);
-  // console.log(msg.payloadString);
-
-  //make this a switch case
+  // console.log(msg);
   setMsgTopic(msg.topic);
   setMsgData(msg.payloadString);
-  
+  // do some new data stuff.
 
+  // if (msg.Topic === "sensor")
+  // {
+  //   var temp = recieveArr;
+  //   temp[0] = msgData;
+  //   setRecieveArr([...temp]);
+  // }
+  // else if (msg.Topic === "light")
+  // {
+  //   let temp = recieveArr;
+  //   temp[1] = msgData;
+  //   setRecieveArr([...temp]);
 
-  // console.log(recieveArr);
-  //msg.topic ? "x" : setRecieveArr(recieveArr)
-  //want to make it more declaritive with this and spread operator
+  //   setLightArray(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+  //   // console.log(parseInt(temp[1], 16).toString(2).padStart(4,'0'));
+  //   // console.log({lightArrayState});
+  //   // console.log(lightArrayState);
+  // }
+  // else if (msg.Topic === "tempVal")
+  // {
+  //   var temp = recieveArr;
+  //   temp[2] = msg.payload;
+  //   setRecieveArr([...temp]);
+  //   if (lineData.length < 20)
+  //   {
+  //     // console.log(msgData);
+  //     let a = [...lineData];  
+  //     // console.log(a);
+  //     setLineData([...lineData, parseFloat(msgData/100)]);
+  //   }
+  //   else
+  //   {
+  //     // console.log("new");
+  //     //removes the first index of the list
+  //     var a = lineData;
+  //     a.shift();
 
-  // sendMsg("asdf", "tesing");
+  //     // console.log(b);
+  //     // console.log(a);
+  //     setLineData([...a, parseFloat(msgData / 100)]);
+  //   }
 
-  //case by case topic sorted assignment
-  //if topic => do this
+  //   console.log("lineUpdate");
+  // }
 }
 
 
@@ -277,8 +308,8 @@ const MainPage = ({navigation}) => {
                 borderRadius: 16
               },
               propsForDots: {
-                r: "3",
-                strokeWidth: "2",
+                r: "2",
+                strokeWidth: "4",
                 stroke: "#7FFFFF"
               }
             }}
@@ -293,54 +324,54 @@ const MainPage = ({navigation}) => {
         </View>
 
         <Row 
-          leftVal={recieveArr[0]}
-          rightVal={lightArrayState[0] == 1 ? "ON" : "OFF"} 
+          leftVal={"non"}
+          rightVal={lightArrayState[3] == 1 ? "ON" : "OFF"} 
           leftNavPageName="00"
           rightNavPageName="01"
           leftMonitorText="Power" 
           rightMonitorText="Outside lights" 
           navigation={navigation}
           iconLeft={<Feather name='battery-charging' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[0] == 1 ? "green" : "black"}/>}
-          toggleIndex={0}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[3] == 1 ? "green" : "black"}/>}
+          toggleIndex={3}
           />
         <Row 
-          leftVal={recieveArr[0]}
-          rightVal={lightArrayState[1] == 1 ? "ON" : "OFF"} 
+          leftVal={"none"}
+          rightVal={lightArrayState[2] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Voltage" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<SimpleLineIcons name='energy' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize}  color={lightArrayState[1] == 1 ? "orange" : "black"}/>}
-          toggleIndex={1}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize}  color={lightArrayState[2] == 1 ? "orange" : "black"}/>}
+          toggleIndex={2}
           />
 
         <Row 
           leftVal={recieveArr[2][0] + recieveArr[2][1] + "." + recieveArr[2][2] + recieveArr[2][3] + "°c" } 
-          rightVal={lightArrayState[2] == 1 ? "ON" : "OFF"} 
+          rightVal={lightArrayState[1] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
           leftMonitorText="Temperature" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
           iconLeft={<Ionicons name='ios-thermometer-outline' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[2] == 1 ? "blue" : "black"}/>}
-          toggleIndex={2}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[1] == 1 ? "#0055c4" : "black"}/>}
+          toggleIndex={1}
           />
 
         <Row 
-          leftVal={recieveArr[0]}
-          rightVal={lightArrayState[3] == 1 ? "ON" : "OFF"} 
+          leftVal={recieveArr[0] > 1500 ? ">1m" : recieveArr[0] + "mm"}
+          rightVal={lightArrayState[0] == 1 ? "ON" : "OFF"} 
           leftNavPageName="01"
           rightNavPageName="11"
-          leftMonitorText="Timer" 
+          leftMonitorText="Sensor Distance" 
           rightMonitorText="Inside lights?" 
           navigation={navigation}
-          iconLeft={<Ionicons name='timer-outline' size={iconSize} color="black"/>}
-          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[3] == 1 ? "yellow" : "black"}/>}
-          toggleIndex={3}
+          iconLeft={<MaterialCommunityIcons name='map-marker-distance' size={iconSize} color={recieveArr[0] < 100 ? "red" : "black"}/>}
+          iconRight={<MaterialIcons name='lightbulb-outline' size={iconSize} color={lightArrayState[0] == 1 ? "yellow" : "black"}/>}
+          toggleIndex={0}
           />
 
         <Text color="green" style={{textAlign:'center',textAlignVertical:'center', flex:0.04}}> status : {isconnected ? "Connected" : "Not Connected"} </Text>
@@ -396,7 +427,7 @@ const TemperaturePage = (navigation) => {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="monitor" component={MainPage} options={{title:"Mointor"}}/>
+        <Stack.Screen name="monitor" component={MainPage} options={{title:"Monitor"}} />
 
         <Stack.Screen name="00" component={SecondPage} options={{title:"Control First top Left"}}/>
         <Stack.Screen name="01" component={SecondPage} options={{title:"Control Light 1"}}/>
