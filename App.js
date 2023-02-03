@@ -4,16 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, ToastAndroid, TouchableOpacity, Vibration, Dimensions} from 'react-native';
 import { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native' 
-import {Client, } from 'paho-mqtt';
+import {Client} from 'paho-mqtt';
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {MaterialIcons, SimpleLineIcons, Ionicons, Feather, MaterialCommunityIcons} from "@expo/vector-icons"
 
 import { LineChart } from 'react-native-chart-kit';
-import { send } from 'q';
 
-const client = new Client("52.63.111.219",8080,'/mqtt', 'native-' + parseInt(Math.random()*100000)); // randomise id int
+const client = new Client("52.63.111.219",8081,'/mqtt', 'native-' + parseInt(Math.random()*100000)); // randomise id int
+// const client = new Client("test.mosquitto.org",8081,'/mqtt', 'native-' + parseInt(Math.random()*100000)); // randomise id int
 
 export default function App() {
 
@@ -58,6 +58,7 @@ useEffect(() => {
   client.connect({
     onSuccess:onConnect,
     onFailure:onDisconnect,
+    useSSL:true,
     reconnect:true,
   });
 
@@ -143,13 +144,13 @@ function onConnect(responseObj){
 
 }
 
-sendMsg = (sendString, Topic) => {
+const sendMsg = (sendString, Topic) => {
   client.send(Topic, sendString);
 }
 
 function lightToggle(toggleIndex)
 {
-  temp = [...lightArrayState];
+  let temp = [...lightArrayState];
   temp[toggleIndex] = (temp[toggleIndex] == 0 ? 1:0);
   console.log(temp);
   console.log(temp.join(''));
